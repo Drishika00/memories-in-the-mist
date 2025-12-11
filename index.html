@@ -35,8 +35,6 @@ main{display:flex;gap:12px;flex-wrap:wrap}
 .post{width:160px;display:flex;flex-direction:column;align-items:center;transform:rotate(-1deg);position:relative}
 .post-delete{position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 2px 4px rgba(0,0,0,0.3)}
 .post-delete:hover{background:#c82333}
-.post-edit{position:absolute;top:4px;right:32px;background:#007bff;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 2px 4px rgba(0,0,0,0.3)}
-.post-edit:hover{background:#0056b3}
 .post-frame{background:#fff;border-radius:8px;padding:8px;box-shadow:0 6px 18px rgba(0,0,0,0.12)}
 .post img{width:140px;height:100px;object-fit:cover;border-radius:4px;display:block;cursor:pointer}
 .post .cap{background:linear-gradient(#ffffffcc,#ffffffcc);width:100%;text-align:center;padding:8px;font-family:monospace;font-size:12px;color:#333}
@@ -77,7 +75,7 @@ button{cursor:pointer}
 
   <section id="feed" class="panel" style="flex:1 1 600px;">
     <h2>📸 Live Scrapbook</h2>
-    <p style="font-size:13px;color:#666">Photos appear for everyone in real-time. Click ✏️ to edit caption, ✕ to delete.</p>
+    <p style="font-size:13px;color:#666">Photos appear for everyone in real-time. Click to view full-size. Click ✕ to delete.</p>
     <div id="uploader">
       <input type="file" id="file" accept="image/*" />
       <input id="caption" placeholder="Add a caption..." />
@@ -244,15 +242,7 @@ async function initSupabase(){
         const idx = state.posts.findIndex(p => p.id === payload.new.id);
         if(idx >= 0) {
           state.posts[idx].deleted = payload.new.deleted || false;
-          state.posts[idx].caption = payload.new.caption || '';
-          state.posts[idx].url = payload.new.url;
-          state.posts[idx].data = payload.new.url;
           renderPosts();
-          
-          // Show feedback for caption edits
-          if(!payload.new.deleted) {
-            showStatus('✏️ Caption updated by ' + (payload.new.by || 'someone'), 'success');
-          }
         }
       })
       .subscribe();
@@ -301,7 +291,6 @@ function renderPosts(){
     d.className='post';
     const time = new Date(p.t).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
     d.innerHTML = `
-      <button class="post-edit" data-id="${p.id}" title="Edit caption">✏️</button>
       <button class="post-delete" data-id="${p.id}" title="Delete photo">✕</button>
       <div class="post-frame">
         <div class="photo-film">
@@ -380,22 +369,13 @@ async function deletePost(postId) {
   showStatus('🗑️ Deleting...', 'info');
   
   try {
-    const id = parseInt(postId);
-    console.log('Deleting post with ID:', id);
-    
-    const res = await supabase
-      .from('posts')
-      .update({ deleted: true })
-      .eq('id', id)
-      .select();
-    
-    console.log('Delete response:', res);
-    
+    const res = await supabase.from('posts').update({ deleted: true }).eq('id', postId);
     if(res.error) {
       console.error('Delete error:', res.error);
       showStatus('❌ Failed to delete: ' + res.error.message, 'error');
     } else {
-      const post = state.posts.find(p => p.id === id);
+      // Immediately update local state to remove from UI
+      const post = state.posts.find(p => p.id === postId);
       if(post) post.deleted = true;
       renderPosts();
       showStatus('✅ Photo deleted', 'success');
@@ -406,53 +386,14 @@ async function deletePost(postId) {
   }
 }
 
-async function editCaption(postId) {
-  if(!usingSupabase) {
-    showStatus('⚠️ Offline mode - cannot edit', 'error');
-    return;
-  }
-  
-  const post = state.posts.find(p => p.id === postId);
-  if(!post) {
-    showStatus('❌ Photo not found', 'error');
-    return;
-  }
-  
-  const newCaption = prompt('Edit caption:', post.caption || '');
-  if(newCaption === null) return; // User cancelled
-  
-  showStatus('💾 Saving caption...', 'info');
-  
-  try {
-    const id = parseInt(postId);
-    const res = await supabase
-      .from('posts')
-      .update({ caption: newCaption.trim() })
-      .eq('id', id)
-      .select();
-    
-    if(res.error) {
-      console.error('Edit error:', res.error);
-      showStatus('❌ Failed to edit: ' + res.error.message, 'error');
-    } else if(res.data && res.data.length > 0) {
-      post.caption = newCaption.trim();
-      renderPosts();
-      showStatus('✅ Caption updated!', 'success');
-    }
-  } catch(e) {
-    console.error('Edit error:', e);
-    showStatus('❌ Error editing: ' + e.message, 'error');
-  }
-}
-
-async function uploadPhoto(file, scavengerItemId = null) {
+async function uploadPhoto(file) {
   if(!usingSupabase) {
     showStatus('⚠️ Offline mode not supported', 'error');
     return;
   }
   
   try {
-    showStatus('📤 Uploading photo...', 'info');
+    showStatus('📤 Uploading...', 'info');
     
     const timestamp = Date.now();
     const random = Math.random().toString(36).slice(2,9);
@@ -467,57 +408,22 @@ async function uploadPhoto(file, scavengerItemId = null) {
     const urlRes = supabase.storage.from('trip-photos').getPublicUrl(filePath);
     const url = urlRes.data.publicUrl;
     
-    // Get caption - different behavior for scavenger vs manual upload
-    let caption = '';
-    let by = '';
-    
-    if(scavengerItemId) {
-      // Scavenger hunt upload - pre-fill with item text
-      const item = state.scavItems.find(s => s.id === scavengerItemId);
-      const suggestedCaption = item ? item.text : '';
-      caption = prompt('Add a caption for your scavenger hunt photo:', suggestedCaption);
-      if(caption === null) {
-        showStatus('⚠️ Upload cancelled', 'error');
-        return;
-      }
-      caption = caption.trim();
-      by = prompt('Your name (optional):') || 'Anonymous';
-    } else {
-      // Manual upload - use caption field
-      caption = el('#caption').value.trim();
-      by = prompt('Your name (optional):') || 'Anonymous';
-    }
-    
+    const caption = el('#caption').value.trim();
+    const by = prompt('Your name (optional)') || 'Anonymous';
     const t = new Date().toISOString();
     
-    // Insert post into database
-    const ins = await supabase.from('posts').insert([{ 
-      url, 
-      caption, 
-      by, 
-      t, 
-      deleted: false 
-    }]).select();
-    
+    // Don't send id - let database auto-generate it
+    const ins = await supabase.from('posts').insert([{ url, caption, by, t, deleted: false }]).select();
     if(ins.error) { 
       showStatus('❌ Save failed: ' + ins.error.message, 'error');
       return;
     }
     
-    // If uploaded from scavenger hunt, mark it as complete
-    if(scavengerItemId && !state.scavCompleted[scavengerItemId]) {
-      await toggleComplete(scavengerItemId);
-      showStatus('✅ Photo uploaded & scavenger item completed!', 'success');
-    } else {
-      showStatus('✅ Photo uploaded successfully!', 'success');
-    }
-    
-    // Clear form fields
+    showStatus('✅ Photo uploaded!', 'success');
     el('#file').value = '';
     el('#caption').value = '';
     
   } catch(e) {
-    console.error('Upload error:', e);
     showStatus('❌ Error: ' + e.message, 'error');
   }
 }
@@ -548,7 +454,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       fileIn.onchange = async () => { 
         const f = fileIn.files[0]; 
         if(!f) return; 
-        await uploadPhoto(f, itemId);
+        await uploadPhoto(f);
         fileIn.value=''; 
       }; 
       fileIn.click(); 
@@ -577,23 +483,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   
   el('#posts').addEventListener('click', async (e) => {
-    e.stopPropagation();
-    
     if(e.target.matches('.post-delete')) {
       e.preventDefault();
-      const postId = e.target.dataset.id;
-      console.log('Delete button clicked, postId:', postId);
+      e.stopPropagation();
+      const postId = parseInt(e.target.dataset.id);
       if(postId) {
         await deletePost(postId);
       }
     }
-    else if(e.target.matches('.post-edit')) {
-      e.preventDefault();
-      const postId = e.target.dataset.id;
-      console.log('Edit button clicked, postId:', postId);
-      if(postId) {
-        await editCaption(postId);
-      }
-    }
   });
 });
+</script>
+</body>
+</html>
