@@ -244,6 +244,7 @@ async function initSupabase(){
         const idx = state.posts.findIndex(p => p.id === payload.new.id);
         if(idx >= 0) {
           state.posts[idx].deleted = payload.new.deleted || false;
+          state.posts[idx].caption = payload.new.caption;
           renderPosts();
         }
       })
@@ -437,7 +438,7 @@ async function editCaption(postId) {
   }
 }
 
-async function uploadPhoto(file) {
+async function uploadPhoto(file, scavengerItemId = null) {
   if(!usingSupabase) {
     showStatus('⚠️ Offline mode not supported', 'error');
     return;
@@ -459,7 +460,13 @@ async function uploadPhoto(file) {
     const urlRes = supabase.storage.from('trip-photos').getPublicUrl(filePath);
     const url = urlRes.data.publicUrl;
     
-    const caption = el('#caption').value.trim();
+    // Get caption - either from input field or prompt
+    let caption = el('#caption').value.trim();
+    if(!caption && scavengerItemId) {
+      const item = state.scavItems.find(s => s.id === scavengerItemId);
+      caption = prompt('Add a caption for your photo:', item ? item.text : '') || '';
+    }
+    
     const by = prompt('Your name (optional)') || 'Anonymous';
     const t = new Date().toISOString();
     
@@ -468,6 +475,11 @@ async function uploadPhoto(file) {
     if(ins.error) { 
       showStatus('❌ Save failed: ' + ins.error.message, 'error');
       return;
+    }
+    
+    // If uploaded from scavenger hunt, mark it as complete
+    if(scavengerItemId && !state.scavCompleted[scavengerItemId]) {
+      await toggleComplete(scavengerItemId);
     }
     
     showStatus('✅ Photo uploaded!', 'success');
@@ -505,7 +517,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       fileIn.onchange = async () => { 
         const f = fileIn.files[0]; 
         if(!f) return; 
-        await uploadPhoto(f);
+        // Pass the scavenger item ID so we can auto-complete and add caption
+        await uploadPhoto(f, itemId);
         fileIn.value=''; 
       }; 
       fileIn.click(); 
