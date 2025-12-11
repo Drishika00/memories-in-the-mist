@@ -244,8 +244,15 @@ async function initSupabase(){
         const idx = state.posts.findIndex(p => p.id === payload.new.id);
         if(idx >= 0) {
           state.posts[idx].deleted = payload.new.deleted || false;
-          state.posts[idx].caption = payload.new.caption;
+          state.posts[idx].caption = payload.new.caption || '';
+          state.posts[idx].url = payload.new.url;
+          state.posts[idx].data = payload.new.url;
           renderPosts();
+          
+          // Show feedback for caption edits
+          if(!payload.new.deleted) {
+            showStatus('✏️ Caption updated by ' + (payload.new.by || 'someone'), 'success');
+          }
         }
       })
       .subscribe();
@@ -373,7 +380,6 @@ async function deletePost(postId) {
   showStatus('🗑️ Deleting...', 'info');
   
   try {
-    // Make sure postId is a number
     const id = parseInt(postId);
     console.log('Deleting post with ID:', id);
     
@@ -389,7 +395,6 @@ async function deletePost(postId) {
       console.error('Delete error:', res.error);
       showStatus('❌ Failed to delete: ' + res.error.message, 'error');
     } else {
-      // Immediately update local state
       const post = state.posts.find(p => p.id === id);
       if(post) post.deleted = true;
       renderPosts();
@@ -408,12 +413,15 @@ async function editCaption(postId) {
   }
   
   const post = state.posts.find(p => p.id === postId);
-  if(!post) return;
+  if(!post) {
+    showStatus('❌ Photo not found', 'error');
+    return;
+  }
   
   const newCaption = prompt('Edit caption:', post.caption || '');
   if(newCaption === null) return; // User cancelled
   
-  showStatus('💾 Saving...', 'info');
+  showStatus('💾 Saving caption...', 'info');
   
   try {
     const id = parseInt(postId);
@@ -426,11 +434,10 @@ async function editCaption(postId) {
     if(res.error) {
       console.error('Edit error:', res.error);
       showStatus('❌ Failed to edit: ' + res.error.message, 'error');
-    } else {
-      // Update local state
+    } else if(res.data && res.data.length > 0) {
       post.caption = newCaption.trim();
       renderPosts();
-      showStatus('✅ Caption updated', 'success');
+      showStatus('✅ Caption updated!', 'success');
     }
   } catch(e) {
     console.error('Edit error:', e);
@@ -445,7 +452,7 @@ async function uploadPhoto(file, scavengerItemId = null) {
   }
   
   try {
-    showStatus('📤 Uploading...', 'info');
+    showStatus('📤 Uploading photo...', 'info');
     
     const timestamp = Date.now();
     const random = Math.random().toString(36).slice(2,9);
@@ -460,18 +467,38 @@ async function uploadPhoto(file, scavengerItemId = null) {
     const urlRes = supabase.storage.from('trip-photos').getPublicUrl(filePath);
     const url = urlRes.data.publicUrl;
     
-    // Get caption - either from input field or prompt
-    let caption = el('#caption').value.trim();
-    if(!caption && scavengerItemId) {
+    // Get caption - different behavior for scavenger vs manual upload
+    let caption = '';
+    let by = '';
+    
+    if(scavengerItemId) {
+      // Scavenger hunt upload - pre-fill with item text
       const item = state.scavItems.find(s => s.id === scavengerItemId);
-      caption = prompt('Add a caption for your photo:', item ? item.text : '') || '';
+      const suggestedCaption = item ? item.text : '';
+      caption = prompt('Add a caption for your scavenger hunt photo:', suggestedCaption);
+      if(caption === null) {
+        showStatus('⚠️ Upload cancelled', 'error');
+        return;
+      }
+      caption = caption.trim();
+      by = prompt('Your name (optional):') || 'Anonymous';
+    } else {
+      // Manual upload - use caption field
+      caption = el('#caption').value.trim();
+      by = prompt('Your name (optional):') || 'Anonymous';
     }
     
-    const by = prompt('Your name (optional)') || 'Anonymous';
     const t = new Date().toISOString();
     
-    // Don't send id - let database auto-generate it
-    const ins = await supabase.from('posts').insert([{ url, caption, by, t, deleted: false }]).select();
+    // Insert post into database
+    const ins = await supabase.from('posts').insert([{ 
+      url, 
+      caption, 
+      by, 
+      t, 
+      deleted: false 
+    }]).select();
+    
     if(ins.error) { 
       showStatus('❌ Save failed: ' + ins.error.message, 'error');
       return;
@@ -480,13 +507,17 @@ async function uploadPhoto(file, scavengerItemId = null) {
     // If uploaded from scavenger hunt, mark it as complete
     if(scavengerItemId && !state.scavCompleted[scavengerItemId]) {
       await toggleComplete(scavengerItemId);
+      showStatus('✅ Photo uploaded & scavenger item completed!', 'success');
+    } else {
+      showStatus('✅ Photo uploaded successfully!', 'success');
     }
     
-    showStatus('✅ Photo uploaded!', 'success');
+    // Clear form fields
     el('#file').value = '';
     el('#caption').value = '';
     
   } catch(e) {
+    console.error('Upload error:', e);
     showStatus('❌ Error: ' + e.message, 'error');
   }
 }
@@ -517,7 +548,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       fileIn.onchange = async () => { 
         const f = fileIn.files[0]; 
         if(!f) return; 
-        // Pass the scavenger item ID so we can auto-complete and add caption
         await uploadPhoto(f, itemId);
         fileIn.value=''; 
       }; 
@@ -567,6 +597,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
-</script>
-</body>
-</html>
