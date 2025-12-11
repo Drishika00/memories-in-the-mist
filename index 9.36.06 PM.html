@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Memories in the Mist – Club Mahabaleshwar</title>
+<style>
+*{box-sizing:border-box;font-family:Inter, system-ui, Arial, sans-serif}
+body{margin:0;padding:16px;background:linear-gradient(180deg,#fff8f2 0%,#fff 60%);color:#111}
+header{margin-bottom:6px;background:linear-gradient(180deg,#ffd9b3,#ffd7e6);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(20,20,30,0.06)}
+h1{margin:0;font-size:20px;color:#8b2f2f}
+.muted{color:#6b5454;margin-top:6px}
+main{display:flex;gap:12px;flex-wrap:wrap}
+#left{width:320px;flex:0 0 320px}
+.panel{background:#fff;padding:12px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:12px}
+#scav-list{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.scav-item{display:flex;justify-content:space-between;align-items:center;padding:8px;border-radius:6px;background:#f7f7f8;transition:all 0.3s ease}
+.scav-item.completed{background:#e8f5e9;text-decoration:line-through;opacity:0.7}
+.scav-item.completed span{color:#4caf50}
+.scav-item button{margin-left:4px;padding:4px 8px;border:none;border-radius:4px;background:#8b2f2f;color:#fff;font-size:11px;cursor:pointer}
+.scav-item button:hover{background:#6b1f1f}
+.scav-item button.delete-btn{background:#dc3545}
+.scav-item button.delete-btn:hover{background:#c82333}
+.scav-item button.edit-btn{background:#007bff}
+.scav-item button.edit-btn:hover{background:#0056b3}
+.scav-item input{flex:1;padding:6px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+#uploader{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+#uploader button{padding:8px 16px;background:#8b2f2f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:500}
+#uploader button:hover{background:#6b1f1f}
+#uploader input[type="text"]{flex:1;min-width:150px;padding:8px;border:1px solid #ddd;border-radius:6px}
+#add-item{padding:6px 12px;background:#8b2f2f;color:#fff;border:none;border-radius:6px;cursor:pointer;margin-top:8px}
+#add-item:hover{background:#6b1f1f}
+#new-item{width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-top:8px}
+#posts{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.post{width:160px;display:flex;flex-direction:column;align-items:center;transform:rotate(-1deg);position:relative}
+.post-delete{position:absolute;top:4px;right:4px;background:#dc3545;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 2px 4px rgba(0,0,0,0.3)}
+.post-delete:hover{background:#c82333}
+.post-edit{position:absolute;top:4px;right:32px;background:#007bff;color:#fff;border:none;border-radius:50%;width:24px;height:24px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;z-index:10;box-shadow:0 2px 4px rgba(0,0,0,0.3)}
+.post-edit:hover{background:#0056b3}
+.post-frame{background:#fff;border-radius:8px;padding:8px;box-shadow:0 6px 18px rgba(0,0,0,0.12)}
+.post img{width:140px;height:100px;object-fit:cover;border-radius:4px;display:block;cursor:pointer}
+.post .cap{background:linear-gradient(#ffffffcc,#ffffffcc);width:100%;text-align:center;padding:8px;font-family:monospace;font-size:12px;color:#333}
+.photo-film{position:relative;overflow:hidden;border-radius:6px}
+.photo-film:after{content:"";pointer-events:none;position:absolute;inset:0;background:radial-gradient(ellipse at center, rgba(0,0,0,0.06) 0%, rgba(0,0,0,0.24) 70%),repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0 1px, rgba(0,0,0,0) 1px 3px);mix-blend-mode:overlay;opacity:0.9}
+.post img.film-tone{filter:contrast(1.06) saturate(1.12) sepia(0.04)}
+.float-wrap{position:fixed;left:0;right:0;top:8px;pointer-events:none;z-index:50}
+.float-item{position:absolute;will-change:transform,opacity;transform-origin:center;font-size:26px;opacity:0.95;filter:drop-shadow(0 4px 6px rgba(0,0,0,0.12))}
+@keyframes floatLeft{0%{transform:translateX(110vw) translateY(0) rotate(0)}50%{transform:translateX(40vw) translateY(-10vh) rotate(10deg)}100%{transform:translateX(-20vw) translateY(0) rotate(-10deg)}}
+.float-straw{animation:floatLeft 16s linear infinite;top:8vh;font-size:28px}
+.float-cloud{animation:floatLeft 28s linear infinite;top:4vh;font-size:44px;opacity:0.8}
+footer{margin-top:14px;color:#666;text-align:center}
+button{cursor:pointer}
+.status-bar{background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:13px;text-align:center}
+.status-bar.success{background:#d4edda;border-color:#28a745;color:#155724}
+.status-bar.error{background:#f8d7da;border-color:#dc3545;color:#721c24}
+@media (max-width:720px){main{flex-direction:column} #left{width:auto;flex:1 1 auto}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌄 Memories in the Mist</h1>
+  <p class="muted">Our family trip to Club Mahabaleshwar – Scavenger Hunt & Live Scrapbook</p>
+</header>
+
+<div id="status-bar" class="status-bar" style="display:none;"></div>
+
+<main id="app">
+  <aside id="left">
+    <div id="scavenger" class="panel">
+      <h2>🎯 Scavenger Hunt</h2>
+      <p style="font-size:13px;color:#666">Tap "Mark" when you find something. Use "📷 Photo" to upload proof!</p>
+      <div id="scav-list"></div>
+      <input id="new-item" placeholder="Add custom item..." />
+      <button id="add-item">+ Add Item</button>
+    </div>
+  </aside>
+
+  <section id="feed" class="panel" style="flex:1 1 600px;">
+    <h2>📸 Live Scrapbook</h2>
+    <p style="font-size:13px;color:#666">Photos appear for everyone in real-time. Click ✏️ to edit caption, ✕ to delete.</p>
+    <div id="uploader">
+      <input type="file" id="file" accept="image/*" />
+      <input id="caption" placeholder="Add a caption..." />
+      <button id="upload">📤 Upload Photo</button>
+    </div>
+    <div id="posts"></div>
+  </section>
+</main>
+
+<footer><small>Made with ❤️ for our family • <span id="photo-count">0</span> memories captured</small></footer>
+
+<div class="float-wrap" aria-hidden="true">
+  <div class="float-item float-cloud">☁️</div>
+  <div class="float-item float-straw" style="animation-delay:0s">🍓</div>
+  <div class="float-item float-straw" style="animation-delay:4s; font-size:22px">🍓</div>
+  <div class="float-item float-cloud" style="animation-delay:10s">☁️</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// REPLACE WITH YOUR SUPABASE CREDENTIALS
+const SUPABASE_URL = "https://uzjkgmkkwzrzrwbdbmud.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6amtnbWtrd3pyenJ3YmRibXVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU0NDk3MTgsImV4cCI6MjA4MTAyNTcxOH0.0lFPuRCnPVVvXtvw9GY4-yeDPLZ9EnBJFFIEW00aC6A";
+
+let supabase = null;
+let usingSupabase = false;
+
+let state = {
+  scavItems: [],
+  scavCompleted: {},
+  posts: []
+};
+
+function el(q){ return document.querySelector(q); }
+
+function showStatus(msg, type = 'info') {
+  const bar = document.getElementById('status-bar');
+  bar.textContent = msg;
+  bar.className = 'status-bar ' + type;
+  bar.style.display = 'block';
+  if(type === 'success') setTimeout(() => bar.style.display = 'none', 3000);
+}
+
+function updatePhotoCount() {
+  el('#photo-count').textContent = state.posts.filter(p => !p.deleted).length;
+}
+
+function confettiBurst(x = window.innerWidth/2, y = 200){
+  for(let i=0;i<18;i++){
+    const div = document.createElement('div');
+    div.textContent = ['🍓','✨','🌄','🎉','🎊','⭐'][Math.floor(Math.random()*6)];
+    div.style.position='fixed';
+    div.style.left = (x + (Math.random()-0.5)*200)+'px';
+    div.style.top = (y + (Math.random()-0.5)*60)+'px';
+    div.style.fontSize = (12 + Math.random()*18)+'px';
+    div.style.pointerEvents='none';
+    div.style.zIndex='9999';
+    div.style.transition='transform 900ms cubic-bezier(.1,.7,.1,1), opacity 900ms';
+    document.body.appendChild(div);
+    requestAnimationFrame(()=> { 
+      div.style.transform = `translate(${(Math.random()-0.5)*300}px, ${200 + Math.random()*240}px) rotate(${(Math.random()-0.5)*720}deg)`; 
+      div.style.opacity=0; 
+    });
+    setTimeout(()=> div.remove(), 1100);
+  }
+}
+
+async function initSupabase(){
+  if(!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    showStatus('⚠️ Running in offline mode', 'error');
+    return;
+  }
+  
+  try{
+    showStatus('🔄 Connecting to database...', 'info');
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    usingSupabase = true;
+    
+    // Load scavenger items
+    const scavRes = await supabase.from('scavenger_items').select('*').order('position', { ascending: true });
+    if(scavRes.error) {
+      console.error('Scavenger items error:', scavRes.error);
+    } else if(scavRes.data) {
+      state.scavItems = scavRes.data;
+    }
+    
+    // Load completed items
+    const compRes = await supabase.from('scavenger_completed').select('*');
+    if(compRes.data) {
+      state.scavCompleted = {};
+      compRes.data.forEach(c => state.scavCompleted[c.item_id] = true);
+    }
+    
+    // Load posts
+    const postsRes = await supabase.from('posts').select('*').order('t', { ascending: false }).limit(500);
+    if(postsRes.error) {
+      console.error('Posts error:', postsRes.error);
+      showStatus('❌ Database error: ' + postsRes.error.message, 'error');
+    } else if(postsRes.data) {
+      state.posts = postsRes.data.map(row => ({
+        id: row.id,
+        data: row.url,
+        caption: row.caption,
+        by: row.by,
+        t: row.t,
+        deleted: row.deleted || false
+      }));
+    }
+    
+    // Realtime for scavenger items
+    supabase.channel('scavenger-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scavenger_items' }, payload => {
+        if(!state.scavItems.find(s => s.id === payload.new.id)) {
+          state.scavItems.push(payload.new);
+          state.scavItems.sort((a,b) => a.position - b.position);
+          renderScav();
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'scavenger_items' }, payload => {
+        const idx = state.scavItems.findIndex(s => s.id === payload.new.id);
+        if(idx >= 0) {
+          state.scavItems[idx] = payload.new;
+          renderScav();
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'scavenger_items' }, payload => {
+        state.scavItems = state.scavItems.filter(s => s.id !== payload.old.id);
+        renderScav();
+      })
+      .subscribe();
+    
+    // Realtime for completed items
+    supabase.channel('completed-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'scavenger_completed' }, payload => {
+        if(payload.eventType === 'INSERT') {
+          state.scavCompleted[payload.new.item_id] = true;
+          renderScav();
+          confettiBurst();
+        } else if(payload.eventType === 'DELETE') {
+          delete state.scavCompleted[payload.old.item_id];
+          renderScav();
+        }
+      })
+      .subscribe();
+    
+    // Realtime for posts
+    supabase.channel('posts-changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'posts' }, payload => {
+        const row = payload.new;
+        if(!state.posts.find(p => p.id === row.id)) {
+          state.posts.unshift({
+            id: row.id,
+            data: row.url,
+            caption: row.caption,
+            by: row.by,
+            t: row.t,
+            deleted: row.deleted || false
+          });
+          renderPosts();
+          confettiBurst();
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'posts' }, payload => {
+        const idx = state.posts.findIndex(p => p.id === payload.new.id);
+        if(idx >= 0) {
+          state.posts[idx].deleted = payload.new.deleted || false;
+          state.posts[idx].caption = payload.new.caption || '';
+          state.posts[idx].url = payload.new.url;
+          state.posts[idx].data = payload.new.url;
+          renderPosts();
+          
+          // Show feedback for caption edits
+          if(!payload.new.deleted) {
+            showStatus('✏️ Caption updated by ' + (payload.new.by || 'someone'), 'success');
+          }
+        }
+      })
+      .subscribe();
+    
+    renderScav();
+    renderPosts();
+    showStatus('✅ Live sync active!', 'success');
+    
+  } catch(e) {
+    console.error('Supabase error:', e);
+    showStatus('❌ Connection failed: ' + e.message, 'error');
+    usingSupabase = false;
+  }
+}
+
+function renderScav(){ 
+  const list = el('#scav-list'); 
+  list.innerHTML='';
+  
+  state.scavItems.forEach((item, idx) => { 
+    const div = document.createElement('div'); 
+    const isCompleted = state.scavCompleted[item.id];
+    div.className = 'scav-item' + (isCompleted ? ' completed' : '');
+    div.dataset.id = item.id;
+    
+    const btn = isCompleted ? 'Unmark ✓' : 'Mark ✓';
+    div.innerHTML = `
+      <span>${item.text}</span>
+      <div>
+        <button class="edit-btn" data-id="${item.id}">✏️</button>
+        <button class="mark" data-id="${item.id}">${btn}</button>
+        <button class="attach" data-id="${item.id}">📷</button>
+        <button class="delete-btn" data-id="${item.id}">🗑️</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function renderPosts(){
+  const posts = el('#posts'); 
+  posts.innerHTML='';
+  
+  state.posts.filter(p => !p.deleted).forEach(p => {
+    const d = document.createElement('div'); 
+    d.className='post';
+    const time = new Date(p.t).toLocaleString('en-US', {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'});
+    d.innerHTML = `
+      <button class="post-edit" data-id="${p.id}" title="Edit caption">✏️</button>
+      <button class="post-delete" data-id="${p.id}" title="Delete photo">✕</button>
+      <div class="post-frame">
+        <div class="photo-film">
+          <a href="${p.data}" target="_blank" rel="noreferrer noopener">
+            <img class="film-tone" src="${p.data}" alt="photo">
+          </a>
+        </div>
+      </div>
+      <div class="cap">${p.caption ? '<strong>'+p.caption+'</strong><br>' : ''}<small>${p.by||'Anonymous'} • ${time}</small></div>
+    `;
+    posts.appendChild(d);
+  });
+  updatePhotoCount();
+}
+
+async function addScavengerItem(text) {
+  if(!usingSupabase) {
+    showStatus('⚠️ Offline mode - item not synced', 'error');
+    return;
+  }
+  
+  const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2,9);
+  const position = state.scavItems.length;
+  
+  const res = await supabase.from('scavenger_items').insert([{ id, text, position }]);
+  if(res.error) {
+    showStatus('❌ Failed to add item: ' + res.error.message, 'error');
+  } else {
+    showStatus('✅ Item added!', 'success');
+  }
+}
+
+async function updateScavengerItem(id, newText) {
+  if(!usingSupabase) return;
+  
+  const res = await supabase.from('scavenger_items').update({ text: newText }).eq('id', id);
+  if(res.error) {
+    showStatus('❌ Failed to update: ' + res.error.message, 'error');
+  } else {
+    showStatus('✅ Updated!', 'success');
+  }
+}
+
+async function deleteScavengerItem(id) {
+  if(!usingSupabase) return;
+  
+  if(!confirm('Delete this scavenger item for everyone?')) return;
+  
+  const res = await supabase.from('scavenger_items').delete().eq('id', id);
+  if(res.error) {
+    showStatus('❌ Failed to delete: ' + res.error.message, 'error');
+  }
+}
+
+async function toggleComplete(itemId) {
+  if(!usingSupabase) return;
+  
+  const isCompleted = state.scavCompleted[itemId];
+  
+  if(isCompleted) {
+    await supabase.from('scavenger_completed').delete().eq('item_id', itemId);
+  } else {
+    const id = 'c_' + Date.now() + '_' + Math.random().toString(36).slice(2,9);
+    await supabase.from('scavenger_completed').insert([{ id, item_id: itemId }]);
+  }
+}
+
+async function deletePost(postId) {
+  if(!usingSupabase) {
+    showStatus('⚠️ Offline mode - cannot delete', 'error');
+    return;
+  }
+  
+  if(!confirm('Delete this photo for everyone?')) return;
+  
+  showStatus('🗑️ Deleting...', 'info');
+  
+  try {
+    const id = parseInt(postId);
+    console.log('Deleting post with ID:', id);
+    
+    const res = await supabase
+      .from('posts')
+      .update({ deleted: true })
+      .eq('id', id)
+      .select();
+    
+    console.log('Delete response:', res);
+    
+    if(res.error) {
+      console.error('Delete error:', res.error);
+      showStatus('❌ Failed to delete: ' + res.error.message, 'error');
+    } else {
+      const post = state.posts.find(p => p.id === id);
+      if(post) post.deleted = true;
+      renderPosts();
+      showStatus('✅ Photo deleted', 'success');
+    }
+  } catch(e) {
+    console.error('Delete error:', e);
+    showStatus('❌ Error deleting: ' + e.message, 'error');
+  }
+}
+
+async function editCaption(postId) {
+  if(!usingSupabase) {
+    showStatus('⚠️ Offline mode - cannot edit', 'error');
+    return;
+  }
+  
+  const post = state.posts.find(p => p.id === postId);
+  if(!post) {
+    showStatus('❌ Photo not found', 'error');
+    return;
+  }
+  
+  const newCaption = prompt('Edit caption:', post.caption || '');
+  if(newCaption === null) return; // User cancelled
+  
+  showStatus('💾 Saving caption...', 'info');
+  
+  try {
+    const id = parseInt(postId);
+    const res = await supabase
+      .from('posts')
+      .update({ caption: newCaption.trim() })
+      .eq('id', id)
+      .select();
+    
+    if(res.error) {
+      console.error('Edit error:', res.error);
+      showStatus('❌ Failed to edit: ' + res.error.message, 'error');
+    } else if(res.data && res.data.length > 0) {
+      post.caption = newCaption.trim();
+      renderPosts();
+      showStatus('✅ Caption updated!', 'success');
+    }
+  } catch(e) {
+    console.error('Edit error:', e);
+    showStatus('❌ Error editing: ' + e.message, 'error');
+  }
+}
+
+async function uploadPhoto(file, scavengerItemId = null) {
+  if(!usingSupabase) {
+    showStatus('⚠️ Offline mode not supported', 'error');
+    return;
+  }
+  
+  try {
+    showStatus('📤 Uploading photo...', 'info');
+    
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).slice(2,9);
+    const filePath = timestamp + '_' + random + '_' + file.name.replace(/[^a-zA-Z0-9.\-\_]/g,'_');
+    
+    const up = await supabase.storage.from('trip-photos').upload(filePath, file);
+    if(up.error) { 
+      showStatus('❌ Upload failed: ' + up.error.message, 'error');
+      return;
+    }
+    
+    const urlRes = supabase.storage.from('trip-photos').getPublicUrl(filePath);
+    const url = urlRes.data.publicUrl;
+    
+    // Get caption - different behavior for scavenger vs manual upload
+    let caption = '';
+    let by = '';
+    
+    if(scavengerItemId) {
+      // Scavenger hunt upload - pre-fill with item text
+      const item = state.scavItems.find(s => s.id === scavengerItemId);
+      const suggestedCaption = item ? item.text : '';
+      caption = prompt('Add a caption for your scavenger hunt photo:', suggestedCaption);
+      if(caption === null) {
+        showStatus('⚠️ Upload cancelled', 'error');
+        return;
+      }
+      caption = caption.trim();
+      by = prompt('Your name (optional):') || 'Anonymous';
+    } else {
+      // Manual upload - use caption field
+      caption = el('#caption').value.trim();
+      by = prompt('Your name (optional):') || 'Anonymous';
+    }
+    
+    const t = new Date().toISOString();
+    
+    // Insert post into database
+    const ins = await supabase.from('posts').insert([{ 
+      url, 
+      caption, 
+      by, 
+      t, 
+      deleted: false 
+    }]).select();
+    
+    if(ins.error) { 
+      showStatus('❌ Save failed: ' + ins.error.message, 'error');
+      return;
+    }
+    
+    // If uploaded from scavenger hunt, mark it as complete
+    if(scavengerItemId && !state.scavCompleted[scavengerItemId]) {
+      await toggleComplete(scavengerItemId);
+      showStatus('✅ Photo uploaded & scavenger item completed!', 'success');
+    } else {
+      showStatus('✅ Photo uploaded successfully!', 'success');
+    }
+    
+    // Clear form fields
+    el('#file').value = '';
+    el('#caption').value = '';
+    
+  } catch(e) {
+    console.error('Upload error:', e);
+    showStatus('❌ Error: ' + e.message, 'error');
+  }
+}
+
+// Event handlers
+document.addEventListener('DOMContentLoaded', async () => {
+  await initSupabase();
+
+  el('#add-item').addEventListener('click', async () => { 
+    const v = el('#new-item').value.trim(); 
+    if(!v) return; 
+    await addScavengerItem(v);
+    el('#new-item').value=''; 
+  });
+
+  el('#scav-list').addEventListener('click', async (e) => {
+    const itemId = e.target.dataset.id;
+    if(!itemId) return;
+    
+    if(e.target.matches('.mark')) { 
+      await toggleComplete(itemId);
+      if(!state.scavCompleted[itemId]) {
+        confettiBurst(e.clientX, e.clientY);
+      }
+    }
+    else if(e.target.matches('.attach')) { 
+      const fileIn = el('#file'); 
+      fileIn.onchange = async () => { 
+        const f = fileIn.files[0]; 
+        if(!f) return; 
+        await uploadPhoto(f, itemId);
+        fileIn.value=''; 
+      }; 
+      fileIn.click(); 
+    }
+    else if(e.target.matches('.delete-btn')) {
+      await deleteScavengerItem(itemId);
+    }
+    else if(e.target.matches('.edit-btn')) {
+      const item = state.scavItems.find(s => s.id === itemId);
+      if(!item) return;
+      
+      const newText = prompt('Edit item:', item.text);
+      if(newText && newText.trim() && newText !== item.text) {
+        await updateScavengerItem(itemId, newText.trim());
+      }
+    }
+  });
+
+  el('#upload').addEventListener('click', async () => { 
+    const f = el('#file').files[0]; 
+    if(!f) { 
+      showStatus('⚠️ Please select a photo first', 'error');
+      return; 
+    } 
+    await uploadPhoto(f);
+  });
+  
+  el('#posts').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    
+    if(e.target.matches('.post-delete')) {
+      e.preventDefault();
+      const postId = e.target.dataset.id;
+      console.log('Delete button clicked, postId:', postId);
+      if(postId) {
+        await deletePost(postId);
+      }
+    }
+    else if(e.target.matches('.post-edit')) {
+      e.preventDefault();
+      const postId = e.target.dataset.id;
+      console.log('Edit button clicked, postId:', postId);
+      if(postId) {
+        await editCaption(postId);
+      }
+    }
+  });
+});
